@@ -82,3 +82,15 @@ func (prodSvc *ProductService) GetCategoryDetail(ctx context.Context, id int) (*
 func (prodSvc *ProductService) GetCategoryList(ctx context.Context, limit, skip int) (*products.CategoryList, error) {
 	return prodSvc.prodRepo.GetCategoryList(ctx, limit, skip)
 }
+
+func (prodSvc *ProductService) UpdateCategory(ctx context.Context, cat *products.Category) error {
+	if err := cat.ValidateForUpdate(); err != nil {
+		return err
+	}
+
+	return prodSvc.prodRepo.UpdateCategory(ctx, cat)
+}
+
+func (prodSvc *ProductService) DeleteCategory(ctx context.Context, id int) error {
+	return prodSvc.prodRepo.DeleteCategory(ctx, id)
+}

@@ -125,6 +125,7 @@ func (prod *Product) ValidateForUpdate() error {
 
 	return errl.BuildError()
 }
+
 func (prod *Product) SetDiscount(qty uint, ty string, result uint, expired int64) error {
 	prod.Discount = &models.Discount{
 		MinQty:    null.NewInt(int64(qty), true),

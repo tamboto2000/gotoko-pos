@@ -26,6 +26,7 @@ var errStatusMap map[string]int = map[string]int{
 	apperror.ObjecMissing:  http.StatusBadRequest,
 	apperror.BadRequest:    http.StatusBadRequest,
 	apperror.InvalidAuth:   http.StatusUnauthorized,
+	apperror.ArrayBase:     http.StatusBadRequest,
 }
 
 func Success(data interface{}) Response {

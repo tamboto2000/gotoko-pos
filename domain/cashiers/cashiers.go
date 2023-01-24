@@ -35,7 +35,7 @@ var (
 	)
 	ErrPasscodeEmpty          = apperror.New(`"passcode" is required`, apperror.AnyRequired, "passcode")
 	ErrPasscodeInvalid        = apperror.New(`"passcode" is invalid, valid input is 6 numeric (0-9) charaters`, apperror.AnyInvalid, "passcode")
-	ErrCashierNotFound        = apperror.New(`"Cashier not found"`, apperror.NotFound, "")
+	ErrCashierNotFound        = apperror.New(`Cashier Not Found`, apperror.NotFound, "")
 	ErrCashierSessionNotFound = apperror.New("Cashier session not found", apperror.NotFound, "")
 )
 
@@ -63,20 +63,20 @@ func (c *Cashier) Validate() error {
 	if c.Name == "" {
 		errList.Add(ErrNameEmpty)
 	} else {
-		rgx := regexp.MustCompile(`^[0-9A-Za-z ]{4,100}$`)
-		if ok := rgx.MatchString(c.Name); !ok {
-			errList.Add(ErrNameInvalid)
-		}
+		// rgx := regexp.MustCompile(`^[0-9A-Za-z ]{4,100}$`)
+		// if ok := rgx.MatchString(c.Name); !ok {
+		// 	errList.Add(ErrNameInvalid)
+		// }
 	}
 
 	// validate passcode
 	if c.Passcode == "" {
 		errList.Add(ErrPasscodeEmpty)
 	} else {
-		rgx := regexp.MustCompile(`^[0-9]{6,6}$`)
-		if ok := rgx.MatchString(c.Passcode); !ok {
-			errList.Add(ErrPasscodeInvalid)
-		}
+		// rgx := regexp.MustCompile(`^[0-9]{6,6}$`)
+		// if ok := rgx.MatchString(c.Passcode); !ok {
+		// 	errList.Add(ErrPasscodeInvalid)
+		// }
 	}
 
 	return errList.BuildError()

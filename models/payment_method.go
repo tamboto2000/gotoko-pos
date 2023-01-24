@@ -5,9 +5,9 @@ import (
 )
 
 type PaymentMethod struct {
-	Id      int
-	Name    string
-	Type    string
-	LogoUrl null.String
+	Id      null.Int    `json:"paymentId"`
+	Name    null.String `json:"name"`
+	Type    null.String `json:"type"`
+	LogoUrl null.String `json:"logoUrl"`
 	Timestamps
 }

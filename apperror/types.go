@@ -8,4 +8,5 @@ const (
 	InternalError = "internal-error"
 	ObjecMissing  = "object.missing"
 	BadRequest    = "bad-request"
+	ArrayBase     = "array.base"
 )

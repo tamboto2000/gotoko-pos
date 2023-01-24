@@ -1,6 +1,7 @@
 package httpcontroller
 
 import (
+	"log"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -84,11 +85,7 @@ func (prodCtrl *ProductsController) GetProductList(ctx *gin.Context) {
 		if err != nil {
 			errl.Add(apperror.New(`"limit" is invalid, valid input are positive integer`, apperror.AnyInvalid, "limit"))
 		} else {
-			if i <= 0 {
-				errl.Add(apperror.New(`"limit" is invalid, valid input are positive integer`, apperror.AnyInvalid, "limit"))
-			} else {
-				limit = i
-			}
+			limit = i
 		}
 	}
 
@@ -97,11 +94,7 @@ func (prodCtrl *ProductsController) GetProductList(ctx *gin.Context) {
 		if err != nil {
 			errl.Add(apperror.New(`"skip" is invalid, valid input are positive integer`, apperror.AnyInvalid, "skip"))
 		} else {
-			if i < 0 {
-				errl.Add(apperror.New(`"skip" is invalid, valid input are positive integer`, apperror.AnyInvalid, "skip"))
-			} else {
-				skip = i
-			}
+			skip = i
 		}
 	}
 
@@ -110,15 +103,12 @@ func (prodCtrl *ProductsController) GetProductList(ctx *gin.Context) {
 		if err != nil {
 			errl.Add(apperror.New(`"categoryId" is invalid, valid input are positive integer`, apperror.AnyInvalid, "categoryId"))
 		} else {
-			if i <= 0 {
-				errl.Add(apperror.New(`"categoryId" is invalid, valid input are positive integer`, apperror.AnyInvalid, "categoryId"))
-			} else {
-				categoryId = i
-			}
+			categoryId = i
 		}
 	}
 
 	if err := errl.BuildError(); err != nil {
+		log.Println("ERROR validation: ", err.Error())
 		res := httpresponse.FromError(err)
 		ctx.JSON(res.StatusCode, res)
 
@@ -127,6 +117,7 @@ func (prodCtrl *ProductsController) GetProductList(ctx *gin.Context) {
 
 	prodList, err := prodCtrl.prodSvc.GetProductList(ctx, limit, skip, categoryId, q)
 	if err != nil {
+		log.Println("ERROR prodSvc.GetProductList: ", err.Error())
 		res := httpresponse.FromError(err)
 		ctx.JSON(res.StatusCode, res)
 
@@ -268,11 +259,7 @@ func (prodCtrl *ProductsController) GetCategoryList(ctx *gin.Context) {
 		if err != nil {
 			errl.Add(apperror.New(`"limit" is invalid, valid input are positive integer`, apperror.AnyInvalid, "limit"))
 		} else {
-			if i <= 0 {
-				errl.Add(apperror.New(`"limit" is invalid, valid input are positive integer`, apperror.AnyInvalid, "limit"))
-			} else {
-				limit = i
-			}
+			limit = i
 		}
 	}
 
@@ -281,11 +268,7 @@ func (prodCtrl *ProductsController) GetCategoryList(ctx *gin.Context) {
 		if err != nil {
 			errl.Add(apperror.New(`"skip" is invalid, valid input are positive integer`, apperror.AnyInvalid, "skip"))
 		} else {
-			if i < 0 {
-				errl.Add(apperror.New(`"skip" is invalid, valid input are positive integer`, apperror.AnyInvalid, "skip"))
-			} else {
-				skip = i
-			}
+			skip = i
 		}
 	}
 
@@ -298,5 +281,73 @@ func (prodCtrl *ProductsController) GetCategoryList(ctx *gin.Context) {
 	}
 
 	res := httpresponse.Success(catList)
+	ctx.JSON(res.StatusCode, res)
+}
+
+func (prodCtrl *ProductsController) UpdateCategory(ctx *gin.Context) {
+	errl := apperror.NewErrorList()
+	errl.SetPrefix("param ValidationError: ")
+	errl.SetType(apperror.AnyInvalid)
+
+	categoryIdStr := ctx.Param("categoryId")
+	categoryId, err := strconv.Atoi(categoryIdStr)
+	if err != nil {
+		errl.Add(apperror.New(`"categoryId" is invalid, valid input is number (0-9)`, apperror.AnyInvalid, "categoryId"))
+	}
+
+	if err := errl.BuildError(); err != nil {
+		res := httpresponse.FromError(err)
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	catObj := new(products.Category)
+
+	if err := ctx.BindJSON(catObj); err != nil {
+		res := httpresponse.FromError(catObj.ValidateForUpdate())
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	catObj.Id = categoryId
+	if err := prodCtrl.prodSvc.UpdateCategory(ctx, catObj); err != nil {
+		res := httpresponse.FromError(err)
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	res := httpresponse.Success(nil)
+	ctx.JSON(res.StatusCode, res)
+}
+
+func (prodCtrl *ProductsController) DeleteCategory(ctx *gin.Context) {
+	errl := apperror.NewErrorList()
+	errl.SetPrefix("param ValidationError: ")
+	errl.SetType(apperror.AnyInvalid)
+
+	categoryIdStr := ctx.Param("categoryId")
+	categoryId, err := strconv.Atoi(categoryIdStr)
+	if err != nil {
+		errl.Add(apperror.New(`"categoryId" is invalid, valid input is number (0-9)`, apperror.AnyInvalid, "categoryId"))
+	}
+
+	if err := errl.BuildError(); err != nil {
+		res := httpresponse.FromError(err)
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	if err := prodCtrl.prodSvc.DeleteCategory(ctx, categoryId); err != nil {
+		res := httpresponse.FromError(err)
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	res := httpresponse.Success(nil)
 	ctx.JSON(res.StatusCode, res)
 }

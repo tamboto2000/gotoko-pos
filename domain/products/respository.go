@@ -168,8 +168,21 @@ func (prodRepo *ProductsRepository) GetProductDetail(ctx context.Context, id int
 }
 
 func (prodRepo *ProductsRepository) GetProductList(ctx context.Context, limit, skip, categoryId int, qs string) (*ProductList, error) {
+	// getProductCount(in_category_id INT, in_qs TEXT)
+	q := `CALL getProductCount(?,?)`
+	row := prodRepo.db.QueryRowContext(ctx, q, categoryId, qs)
+	var count int
+	if err := row.Scan(&count); err != nil {
+		prodRepo.log.Error(err.Error())
+		return nil, commonerr.ErrInternal
+	}
+
 	// getProductList(in_category_id INT, in_qs TEXT, in_limit INT, in_skip INT)
-	q := `CALL getProductList(?, ?, ?, ?);`
+	q = `CALL getProductList(?, ?, ?, ?);`
+
+	if limit <= 0 {
+		limit = count
+	}
 
 	rows, err := prodRepo.db.QueryContext(ctx, q, categoryId, qs, limit, skip)
 	if err != nil {
@@ -205,15 +218,6 @@ func (prodRepo *ProductsRepository) GetProductList(ctx context.Context, limit, s
 		}
 
 		prodList.Products = append(prodList.Products, prod)
-	}
-
-	// getProductCount(in_category_id INT, in_qs TEXT)
-	q = `CALL getProductCount(?,?)`
-	row := prodRepo.db.QueryRowContext(ctx, q, categoryId, qs)
-	var count int
-	if err := row.Scan(&count); err != nil {
-		prodRepo.log.Error(err.Error())
-		return nil, commonerr.ErrInternal
 	}
 
 	prodList.Meta = Meta{
@@ -333,7 +337,19 @@ func (prodRepo *ProductsRepository) GetCategoryDetail(ctx context.Context, id in
 }
 
 func (prodRepo *ProductsRepository) GetCategoryList(ctx context.Context, limit, skip int) (*CategoryList, error) {
-	q := fmt.Sprintf(`SELECT id, name FROM %s ORDER BY id ASC LIMIT ? OFFSET ?`, categoriesTable)
+	q := fmt.Sprintf(`SELECT COUNT(id) FROM %s`, categoriesTable)
+	var count int
+	row := prodRepo.db.QueryRowContext(ctx, q)
+	if err := row.Scan(&count); err != nil {
+		prodRepo.log.Error(err.Error())
+		return nil, commonerr.ErrInternal
+	}
+
+	if limit <= 0 {
+		limit = count
+	}
+
+	q = fmt.Sprintf(`SELECT id, name FROM %s ORDER BY id ASC LIMIT ? OFFSET ?`, categoriesTable)
 	rows, err := prodRepo.db.QueryContext(ctx, q, limit, skip)
 	if err != nil {
 		prodRepo.log.Error(err.Error())
@@ -358,14 +374,6 @@ func (prodRepo *ProductsRepository) GetCategoryList(ctx context.Context, limit, 
 		catList.Categories = append(catList.Categories, cat)
 	}
 
-	q = fmt.Sprintf(`SELECT COUNT(id) FROM %s`, categoriesTable)
-	var count int
-	row := prodRepo.db.QueryRowContext(ctx, q)
-	if err := row.Scan(&count); err != nil {
-		prodRepo.log.Error(err.Error())
-		return nil, commonerr.ErrInternal
-	}
-
 	catList.Meta = Meta{
 		Total: count,
 		Limit: limit,
@@ -373,4 +381,41 @@ func (prodRepo *ProductsRepository) GetCategoryList(ctx context.Context, limit, 
 	}
 
 	return catList, nil
+}
+
+func (prodRepo *ProductsRepository) UpdateCategory(ctx context.Context, cat *Category) error {
+	q := fmt.Sprintf(`SELECT id FROM %s WHERE id = ?`, categoriesTable)
+	row := prodRepo.db.QueryRowContext(ctx, q, cat.Id)
+	var id int
+	if err := row.Scan(&id); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrCategoryNotFound
+		}
+
+		prodRepo.log.Error(err.Error())
+		return commonerr.ErrInternal
+	}
+
+	q = `CALL updateCategory(?,?)`
+	_, err := prodRepo.db.ExecContext(ctx, q, id, cat.Name)
+	if err != nil {
+		prodRepo.log.Error(err.Error())
+		return commonerr.ErrInternal
+	}
+
+	return nil
+}
+
+func (prodRepo *ProductsRepository) DeleteCategory(ctx context.Context, id int) error {
+	q := fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, categoriesTable)
+	res, err := prodRepo.db.ExecContext(ctx, q, id)
+	if err != nil {
+		prodRepo.log.Error(err.Error())
+	}
+
+	if count, _ := res.RowsAffected(); count == 0 {
+		return ErrCategoryNotFound
+	}
+
+	return nil
 }

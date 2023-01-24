@@ -18,9 +18,11 @@ var ErrUnauthorized = apperror.New("Unauthorized", apperror.InvalidAuth, "")
 func AuthMiddleware(cr *cashiers.CashiersRepository, cmr *cashiers.CashiersMemRepository, log *zap.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		bearer := ctx.GetHeader("Authorization")
-		rgx := regexp.MustCompile(`^Bearer ([a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+)$`)
+		rgx := regexp.MustCompile(`^JWT ([a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+)$`)
 		res := rgx.FindAllStringSubmatch(bearer, 1)
 		if res == nil {
+			log.Warn("malformed token " + bearer)
+
 			res := httpresponse.FromError(ErrUnauthorized)
 			ctx.JSON(res.StatusCode, res)
 			ctx.Abort()
@@ -31,6 +33,7 @@ func AuthMiddleware(cr *cashiers.CashiersRepository, cmr *cashiers.CashiersMemRe
 		token := res[0][1]
 		claims, err := jwtparse.ParseJWT(token)
 		if err != nil {
+			log.Warn("authorization failed, token " + bearer)
 			res := httpresponse.FromError(ErrUnauthorized)
 			ctx.JSON(res.StatusCode, res)
 			ctx.Abort()

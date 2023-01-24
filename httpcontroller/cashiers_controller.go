@@ -66,25 +66,35 @@ func (cashierCtrl *CashiersController) GetDetail(ctx *gin.Context) {
 func (cashierCtrl *CashiersController) GetList(ctx *gin.Context) {
 	limitStr := ctx.Query("limit")
 	skipStr := ctx.Query("skip")
+	var limit int
+	var skip int
 
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		res := httpresponse.FromError(apperror.New(
-			`"limit" is invalid, valid input are numeric (0-9)`,
-			apperror.AnyRequired,
-			"limit",
-		))
+	if limitStr != "" {
+		i, err := strconv.Atoi(limitStr)
+		if err != nil {
+			res := httpresponse.FromError(apperror.New(
+				`"limit" is invalid, valid input are numeric (0-9)`,
+				apperror.AnyRequired,
+				"limit",
+			))
 
-		ctx.JSON(res.StatusCode, res)
-		return
+			ctx.JSON(res.StatusCode, res)
+			return
+		}
+
+		limit = i
 	}
 
-	skip, err := strconv.Atoi(skipStr)
-	if err != nil {
-		res := httpresponse.FromError(apperror.New(`"skip" is invalid, valid input are numeric (0-9)`, apperror.AnyRequired, "skip"))
-		ctx.JSON(res.StatusCode, res)
+	if skipStr != "" {
+		i, err := strconv.Atoi(skipStr)
+		if err != nil {
+			res := httpresponse.FromError(apperror.New(`"skip" is invalid, valid input are numeric (0-9)`, apperror.AnyRequired, "skip"))
+			ctx.JSON(res.StatusCode, res)
 
-		return
+			return
+		}
+
+		skip = i
 	}
 
 	cashierList, err := cashierCtrl.cashierSvc.GetList(ctx, limit, skip)
@@ -122,6 +132,31 @@ func (cashierCtrl *CashiersController) Update(ctx *gin.Context) {
 
 	cashierObj.Id = cashierId
 	if err := cashierCtrl.cashierSvc.Update(ctx, cashierObj); err != nil {
+		res := httpresponse.FromError(err)
+		ctx.JSON(res.StatusCode, res)
+
+		return
+	}
+
+	res := httpresponse.Success(nil)
+	ctx.JSON(res.StatusCode, res)
+}
+
+func (cashierCtrl *CashiersController) Delete(ctx *gin.Context) {
+	cashierIdStr := ctx.Param("cashierId")
+	cashierId, err := strconv.Atoi(cashierIdStr)
+	if err != nil {
+		res := httpresponse.FromError(apperror.New(
+			`"cashierId" invalid, valid input are numeric (0-9)`,
+			apperror.AnyRequired,
+			"cashierId",
+		))
+
+		ctx.JSON(res.StatusCode, res)
+		return
+	}
+
+	if err := cashierCtrl.cashierSvc.Delete(ctx, cashierId); err != nil {
 		res := httpresponse.FromError(err)
 		ctx.JSON(res.StatusCode, res)
 

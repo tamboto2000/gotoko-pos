@@ -97,3 +97,7 @@ func (cashierSvc *CashierService) Update(ctx context.Context, cashier *cashiers.
 
 	return nil
 }
+
+func (cashierSvc *CashierService) Delete(ctx context.Context, id int) error {
+	return cashierSvc.cashierRepo.Delete(ctx, id)
+}

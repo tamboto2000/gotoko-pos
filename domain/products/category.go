@@ -20,6 +20,18 @@ func NewCategory(name string) (Category, error) {
 	return cat, cat.Validate()
 }
 
+func (cat *Category) ValidateForUpdate() error {
+	errl := apperror.NewErrorList()
+	errl.SetType(apperror.AnyRequired)
+	errl.SetPrefix("body ValidationError: ")
+
+	if cat.Name.String == "" {
+		errl.Add(apperror.NewWithPeers(`"value" must contain at least one of [name]`, apperror.ObjecMissing, []string{}, "value", []string{"name"}))
+	}
+
+	return errl.BuildError()
+}
+
 func (cat *Category) Validate() error {
 	errl := apperror.NewErrorList()
 	errl.SetType(apperror.AnyRequired)

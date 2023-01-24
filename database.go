@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
+	"github.com/tamboto2000/gotoko-pos/migrations"
 )
 
 const (
@@ -18,17 +18,23 @@ const (
 )
 
 func buildDatabase() (*sql.DB, error) {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err.Error())
-	}
-
 	host := os.Getenv(mysqlHostEnv)
 	port := os.Getenv(mysqlPortEnv)
 	user := os.Getenv(mysqlUserEnv)
 	pass := os.Getenv(mysqlPasswordEnv)
 	dbname := os.Getenv(mysqlDbNameEnv)
 
-	connStr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, pass, host, port, dbname)
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true", user, pass, host, port, dbname)
+	log.Println("connStr: ", connStr)
 
-	return sql.Open("mysql", connStr)
+	db, err := sql.Open("mysql", connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := migrations.Migrate(db, dbname); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

@@ -66,7 +66,21 @@ func (cashierRepo *CashiersRepository) Get(ctx context.Context, id int) (*Cashie
 }
 
 func (cashierRepo *CashiersRepository) GetList(ctx context.Context, limit, skip int) (*Cashiers, error) {
-	q := fmt.Sprintf("SELECT id, name FROM %s ORDER BY id LIMIT ? OFFSET ?", cashiersTable)
+	q := "SELECT COUNT(id) FROM " + cashiersTable
+	row := cashierRepo.query.QueryRowContext(ctx, q)
+	var count int
+	if err := row.Scan(&count); err != nil {
+		if err != sql.ErrNoRows {
+			cashierRepo.log.Error(err.Error())
+			return nil, commonerr.ErrInternal
+		}
+	}
+
+	if limit <= 0 {
+		limit = count
+	}
+
+	q = fmt.Sprintf("SELECT id, name FROM %s ORDER BY id LIMIT ? OFFSET ?", cashiersTable)
 	rows, err := cashierRepo.query.QueryContext(ctx, q, limit, skip)
 	if err != nil {
 		cashierRepo.log.Error(err.Error())
@@ -92,16 +106,6 @@ func (cashierRepo *CashiersRepository) GetList(ctx context.Context, limit, skip 
 		cashiers.Cashiers = append(cashiers.Cashiers, cashier)
 	}
 
-	q = "SELECT COUNT(id) FROM " + cashiersTable
-	row := cashierRepo.query.QueryRowContext(ctx, q)
-	var count int
-	if err := row.Scan(&count); err != nil {
-		if err != sql.ErrNoRows {
-			cashierRepo.log.Error(err.Error())
-			return nil, commonerr.ErrInternal
-		}
-	}
-
 	cashiers.Meta.Total = count
 	cashiers.Meta.Limit = limit
 	cashiers.Meta.Skip = skip
@@ -123,18 +127,21 @@ func (cashierRepo *CashiersRepository) Create(ctx context.Context, c *Cashier) e
 		return commonerr.ErrInternal
 	}
 
-	q = fmt.Sprintf(`SELECT created_at, updated_at FROM %s WHERE id = LAST_INSERT_ID()`, cashiersTable)
-	row := cashierRepo.query.QueryRowContext(ctx, q)
-	c.CreatedAt = new(time.Time)
-	c.UpdatedAt = new(time.Time)
-	if err := row.Scan(
-		&c.CreatedAt,
-		&c.UpdatedAt,
-	); err != nil {
-		cashierRepo.log.Error(err.Error())
-		return commonerr.ErrInternal
-	}
+	// q = fmt.Sprintf(`SELECT created_at, updated_at FROM %s WHERE id = LAST_INSERT_ID()`, cashiersTable)
+	// row := cashierRepo.query.QueryRowContext(ctx, q)
+	// c.CreatedAt = new(time.Time)
+	// c.UpdatedAt = new(time.Time)
+	// if err := row.Scan(
+	// 	&c.CreatedAt,
+	// 	&c.UpdatedAt,
+	// ); err != nil {
+	// 	cashierRepo.log.Error(err.Error())
+	// 	return commonerr.ErrInternal
+	// }
 
+	createdAt := time.Now()
+	c.CreatedAt = &createdAt
+	c.UpdatedAt = &createdAt
 	c.Id = int(lastId)
 
 	return nil
@@ -153,20 +160,47 @@ func (cashierRepo *CashiersRepository) Update(ctx context.Context, c *Cashier) e
 		return commonerr.ErrInternal
 	}
 
-	q = `SET @name = ?, @passcode = ?`
-	_, err := cashierRepo.query.ExecContext(ctx, q, c.Name, c.encryptPasscode)
+	// q = `SET @name = ?, @passcode = ?`
+	// _, err := cashierRepo.query.ExecContext(ctx, q, c.Name, c.encryptPasscode)
+	// if err != nil {
+	// 	cashierRepo.log.Error(err.Error())
+	// 	return commonerr.ErrInternal
+	// }
+
+	q = `UPDATE cashiers SET
+		name = CASE WHEN ? != '' THEN ? ELSE name END,
+		passcode = CASE WHEN ? != '' THEN ? ELSE passcode END
+	WHERE id = ?;`
+
+	_, err := cashierRepo.query.ExecContext(
+		ctx,
+		q,
+		c.Name, c.Name,
+		c.encryptPasscode, c.encryptPasscode,
+		id,
+	)
 	if err != nil {
 		cashierRepo.log.Error(err.Error())
 		return commonerr.ErrInternal
 	}
 
-	q = `UPDATE cashiers SET
-		name = CASE WHEN @name = '' THEN name ELSE @name END,
-		passcode = CASE WHEN @passcode = '' THEN passcode ELSE @passcode END
-	WHERE id = 4;`
+	return nil
+}
 
-	_, err = cashierRepo.query.ExecContext(ctx, q)
-	if err != nil {
+func (cashierRepo *CashiersRepository) Delete(ctx context.Context, id int) error {
+	q := fmt.Sprintf(`SELECT id FROM %s WHERE id = ?`, cashiersTable)
+	row := cashierRepo.query.QueryRowContext(ctx, q, id)
+	if err := row.Scan(&id); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrCashierNotFound
+		}
+
+		cashierRepo.log.Error(err.Error())
+		return commonerr.ErrInternal
+	}
+
+	q = fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, cashiersTable)
+	if _, err := cashierRepo.db.ExecContext(ctx, q, id); err != nil {
 		cashierRepo.log.Error(err.Error())
 		return commonerr.ErrInternal
 	}

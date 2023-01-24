@@ -45,6 +45,20 @@ func NewWithPeers(msg, ty string, path []string, label string, peers []string) E
 	}
 }
 
+func NewMinimal(msg, ty, label string) Error {
+	return Error{
+		Message: msg,
+		Type:    ty,
+		Path:    []string{},
+		Context: Context{
+			Label:           label,
+			Peers:           nil,
+			PeersWithLabels: nil,
+			Value:           new(struct{}),
+		},
+	}
+}
+
 func (e Error) Error() string {
 	return e.Message
 }

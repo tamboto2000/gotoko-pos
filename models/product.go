@@ -4,7 +4,7 @@ import "gopkg.in/guregu/null.v4"
 
 type Product struct {
 	Id         int      `json:"productId"`
-	Sku        string   `json:"sku"`
+	Sku        string   `json:"sku,omitempty"`
 	Name       string   `json:"name"`
 	Stock      null.Int `json:"stock"`
 	Price      null.Int `json:"price"`
