@@ -1,6 +1,7 @@
--- function to calculate subtotal per product
-CREATE FUNCTION IF NOT EXISTS IF NOT EXISTS orderItemSubTotal(in_prod_id INT, in_qty INT)
-RETURNS JSON
+-- procedure to calculate subtotal per product
+DROP PROCEDURE IF EXISTS orderItemSubTotal;
+DELIMITER //
+CREATE PROCEDURE orderItemSubTotal(IN in_prod_id INT, IN in_qty INT, OUT out_order_item JSON)
 BEGIN
 	DECLARE v_prod_id INT;
     DECLARE v_prod_name VARCHAR(100);    
@@ -71,7 +72,7 @@ BEGIN
 		END IF;
 	END IF;
 		    
-    RETURN JSON_OBJECT(
+    SELECT JSON_OBJECT(
 		'productId', v_prod_id,
         'name', v_prod_name,
         'stock', v_stock,
@@ -81,8 +82,9 @@ BEGIN
 		'totalNormalPrice', ROUND(v_total_price), 
 		'totalFinalPrice', ROUND(v_final_price),
         'discount', v_disc
-    );
-END;
+    ) INTO out_order_item;
+END //
+DELIMITER ;
 
 -- function to calculate order subtotal
 DELIMITER //

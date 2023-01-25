@@ -24,11 +24,11 @@ func Migrate(db *sql.DB, dbname string) error {
 		return err
 	}
 
-	if err := m.Force(1); err != nil {
-		return err
-	}
+	if err := m.Up(); err != nil {
+		if err != migrate.ErrNoChange {
+			return err
+		}
 
-	if err := m.Up(); err != migrate.ErrNoChange {
 		return err
 	}
 
