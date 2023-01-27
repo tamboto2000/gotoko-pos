@@ -11,11 +11,12 @@ import (
 )
 
 func main() {
-	localEnv := flag.Bool("lenv", true, "if true, local .env file will be used for configuration")
+	localEnv := flag.Bool("lenv", false, "if true, local .env file will be used for configuration")
 
 	flag.Parse()
 
 	if *localEnv {
+		log.Println("using local .env")
 		if err := godotenv.Load(); err != nil {
 			log.Fatal(err.Error())
 		}

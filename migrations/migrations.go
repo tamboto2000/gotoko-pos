@@ -29,7 +29,7 @@ func Migrate(db *sql.DB, dbname string) error {
 			return err
 		}
 
-		return err
+		return nil
 	}
 
 	return nil

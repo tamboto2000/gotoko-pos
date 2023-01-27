@@ -1,4 +1,3 @@
--- SET GLOBAL log_bin_trust_function_creators = 1;
 DROP TABLE IF EXISTS cashiers;
 CREATE TABLE IF NOT EXISTS cashiers (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -27,7 +26,8 @@ CREATE TABLE IF NOT EXISTS products (
     category_id INT NOT NULL,    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FULLTEXT(name)
+    FULLTEXT(name),
+    INDEX(category_id)
 );
 
 DROP TABLE IF EXISTS product_skus;
@@ -215,8 +215,13 @@ CREATE TABLE IF NOT EXISTS orders (
 -- END;
 
 -- procedure to get list of products
+DROP PROCEDURE IF EXISTS getProductList;
 CREATE PROCEDURE IF NOT EXISTS getProductList(in_category_id INT, in_qs TEXT, in_limit INT, in_skip INT)
 BEGIN
+	IF in_limit <= 0 THEN
+		SET in_limit = 2147483647;
+	END IF;
+	
 	SELECT 
 		DISTINCT p.id,
 		p.name, 
@@ -249,17 +254,17 @@ BEGIN
 			ELSE 
 				TRUE 
 			END
-		)	
+		)
 	
-	ORDER BY (
-		CASE WHEN in_qs IS NOT NULL AND in_qs != ''
-        THEN
-			MATCH(p.name) AGAINST(in_qs WITH QUERY EXPANSION)
-		ELSE
-			p.id
-		END
-    ) DESC
-	LIMIT in_limit OFFSET in_skip;
+-- 	ORDER BY (
+-- 		CASE WHEN in_qs IS NOT NULL AND in_qs != ''
+--         THEN
+-- 			MATCH(p.name) AGAINST(in_qs WITH QUERY EXPANSION)
+-- 		ELSE
+-- 			p.id
+-- 		END
+--     ) DESC
+	LIMIT in_limit OFFSET in_skip; 
 END;
 
 -- procedure to get products count based on category and search keyword
@@ -284,6 +289,7 @@ BEGIN
 END;
 
 -- procedure to update a product
+DROP PROCEDURE IF EXISTS updateProduct;
 CREATE PROCEDURE IF NOT EXISTS updateProduct(
 	in_id INT,
 	in_category_id INT, 
@@ -314,6 +320,7 @@ BEGIN
 END;
 
 -- procedure to update a payment method
+DROP PROCEDURE IF EXISTS updatePaymentMethod;
 CREATE PROCEDURE IF NOT EXISTS updatePaymentMethod(
 	in_id INT,	
     in_name VARCHAR(50),
@@ -330,6 +337,7 @@ END;
 
 
 -- procedure to add order
+DROP PROCEDURE IF EXISTS addOrder;
 CREATE PROCEDURE IF NOT EXISTS addOrder(in_cashier_id INT, in_receipt_id VARCHAR(5), in_order JSON)
 BEGIN
 	DECLARE v_total_price INT;
@@ -357,7 +365,7 @@ BEGIN
     -- SET v_total_paid = in_order->'$.totalPaid';
     SET v_total_paid = JSON_EXTRACT(in_order, '$.totalPaid');
     SET v_total_return = 0;
-    SET v_products = orderSubTotal(JSON_EXTRACT(in_order, '$.products'));
+    CALL orderSubTotal(JSON_EXTRACT(in_order, '$.products'), v_products);
     SET v_products = JSON_EXTRACT(v_products, '$.products');
     SET v_products_len = JSON_LENGTH(v_products);
     

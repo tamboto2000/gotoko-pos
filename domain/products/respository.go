@@ -169,20 +169,16 @@ func (prodRepo *ProductsRepository) GetProductDetail(ctx context.Context, id int
 
 func (prodRepo *ProductsRepository) GetProductList(ctx context.Context, limit, skip, categoryId int, qs string) (*ProductList, error) {
 	// getProductCount(in_category_id INT, in_qs TEXT)
-	q := `CALL getProductCount(?,?)`
-	row := prodRepo.db.QueryRowContext(ctx, q, categoryId, qs)
-	var count int
-	if err := row.Scan(&count); err != nil {
-		prodRepo.log.Error(err.Error())
-		return nil, commonerr.ErrInternal
-	}
+	// q := `CALL getProductCount(?,?)`
+	// row := prodRepo.db.QueryRowContext(ctx, q, categoryId, qs)
+	// var count int
+	// if err := row.Scan(&count); err != nil {
+	// 	prodRepo.log.Error(err.Error())
+	// 	return nil, commonerr.ErrInternal
+	// }
 
 	// getProductList(in_category_id INT, in_qs TEXT, in_limit INT, in_skip INT)
-	q = `CALL getProductList(?, ?, ?, ?);`
-
-	if limit <= 0 {
-		limit = count
-	}
+	q := `CALL getProductList(?, ?, ?, ?);`
 
 	rows, err := prodRepo.db.QueryContext(ctx, q, categoryId, qs, limit, skip)
 	if err != nil {
@@ -191,6 +187,7 @@ func (prodRepo *ProductsRepository) GetProductList(ctx context.Context, limit, s
 	}
 
 	prodList := new(ProductList)
+	prodList.Products = make([]Product, 0)
 	for rows.Next() {
 		var prod Product
 		prod.Category = new(Category)
@@ -221,7 +218,7 @@ func (prodRepo *ProductsRepository) GetProductList(ctx context.Context, limit, s
 	}
 
 	prodList.Meta = Meta{
-		Total: count,
+		Total: len(prodList.Products),
 		Limit: limit,
 		Skip:  skip,
 	}

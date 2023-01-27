@@ -9,6 +9,7 @@ import (
 
 func routes(log *zap.Logger) *gin.Engine {
 	root := gin.New()
+	root.Use(httpmiddleware.RequestLog(log))
 
 	// /cashiers
 	cashiresCtrl := httpcontroller.NewCashierController(cashierSvc)
@@ -45,7 +46,7 @@ func routes(log *zap.Logger) *gin.Engine {
 	categoryGroup := root.Group("/categories")
 	categoryGroup.POST("", prodCtrl.CreateCategory)
 	categoryGroup.PUT("/:categoryId", prodCtrl.UpdateCategory)
-	categoryGroup.DELETE("/:categoryId", prodCtrl.DeleteCategory)	
+	categoryGroup.DELETE("/:categoryId", prodCtrl.DeleteCategory)
 
 	// /categories group with authorization
 	categoryGroupAuth := root.Group("/categories")

@@ -31,4 +31,4 @@ RUN apk del -r patchelf file
 
 EXPOSE 3030
 
-CMD ["./gotoko-pos", "-lenv", "false"]
+CMD ["./gotoko-pos"]

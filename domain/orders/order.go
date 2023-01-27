@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/tamboto2000/gotoko-pos/apperror"
@@ -30,7 +31,7 @@ type OrderMeta struct {
 
 type Order struct {
 	OrderMeta *OrderMeta    `json:"order,omitempty"`
-	Subtotal  int           `json:"subtotal,omitempty"`
+	Subtotal  float64       `json:"subtotal,omitempty"`
 	Products  OrderItemList `json:"products"`
 	TotalPaid int           `json:"totalPaid,omitempty"`
 	PaymentId int           `json:"paymentId,omitempty"`
@@ -73,7 +74,7 @@ func (o *Order) Value() (driver.Value, error) {
 }
 
 type Discount struct {
-	Id              int    `json:"-"`
+	Id              int    `json:"discountId"`
 	ProductId       int    `json:"-"`
 	MinQty          int    `json:"qty"`
 	Type            string `json:"type"`
@@ -87,11 +88,26 @@ type OrderItem struct {
 	models.Product
 	Discount         *Discount `json:"discount"`
 	Qty              int       `json:"qty"`
-	TotalNormalPrice int       `json:"totalNormalPrice"`
-	TotalFinalPrice  int       `json:"totalFinalPrice"`
+	TotalNormalPrice float64   `json:"totalNormalPrice"`
+	TotalFinalPrice  float64   `json:"totalFinalPrice"`
 }
 
-type OrderItemList []OrderItem
+func (oi *OrderItem) CalcSubtotal() {
+	oi.TotalNormalPrice = (float64(oi.Price.Int64) * float64(oi.Qty))
+	oi.TotalFinalPrice = oi.TotalNormalPrice
+	if oi.Discount.Id != 0 {
+		if oi.Discount.Type == "PERCENT" && oi.Qty >= oi.Discount.MinQty {
+			percentResult := (oi.TotalNormalPrice * float64(oi.Discount.Result)) / 100
+			oi.TotalFinalPrice = math.Round(oi.TotalNormalPrice - percentResult)
+		} else if oi.Discount.Type == "BUY_N" {
+			oi.TotalFinalPrice = float64(oi.Discount.Result)
+		}
+	} else {
+		oi.Discount = nil
+	}
+}
+
+type OrderItemList []*OrderItem
 
 func (ol OrderItemList) Validate() error {
 	errl := apperror.NewErrorList()

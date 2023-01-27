@@ -15,6 +15,13 @@ import (
 
 var ErrUnauthorized = apperror.New("Unauthorized", apperror.InvalidAuth, "")
 
+func RequestLog(log *zap.Logger) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		log.Sugar().Infof("%s %s?%s", ctx.Request.Method, ctx.Request.URL.Path, ctx.Request.URL.Query().Encode())
+		ctx.Next()
+	}
+}
+
 func AuthMiddleware(cr *cashiers.CashiersRepository, cmr *cashiers.CashiersMemRepository, log *zap.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		bearer := ctx.GetHeader("Authorization")
